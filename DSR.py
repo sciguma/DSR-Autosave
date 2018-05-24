@@ -22,7 +22,7 @@ MINUTES_X = 5
 # Constants
 PATH_UserFolder = path.expandvars("%userprofile%")
 PATH_DSR = path.join(PATH_UserFolder, FOLDER_documents, "NBGI", "DARK SOULS REMASTERED")
-PATH_DSR = "D:\\Cloud\\NBGI\\DARK SOULS REMASTERED"
+# PATH_DSR = "D:\\Cloud\\NBGI\\DARK SOULS REMASTERED"
 
 def backup_saves(init):
     for path_dir in listdir(PATH_DSR):

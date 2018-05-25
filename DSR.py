@@ -1,33 +1,31 @@
-from os import path, listdir, makedirs
+from os import path, listdir, makedirs, remove
 from shutil import copyfile
 from time import time, localtime, strftime, sleep
 from datetime import datetime
+import sys
 
 """
 automatic DSR backup file creation
 (1) creates backups upon start
-(2) creates backups every MINUTES_X minutes defined below. Default: 5
+(2) creates backups every saveInterval minutes defined below. Default: 5
+(3) deletes backups if there are greater than maxBackups in backup directory. Default: 15
 note: the documents folder has to be set as FOLDER_documents below. Default: 'documents'
 note: auto save only for files which have been modified in the last 10 minutes
 note: should be compiled using PyInstaller
 """
 
-# variables
 # insert the name of the windows documents folder
 # depends either on locale (by default) or user setting
-FOLDER_documents = "documents"
-MINUTES_X = 5
+DOCUMENTS_NAME = "documents"
+# Defaults
+DEFAULT_DSR_PATH = path.join(path.expandvars("%userprofile%"), DOCUMENTS_NAME, "NBGI", "DARK SOULS REMASTERED")
+DEFAULT_SAVE_INTERVAL = 5
+DEFAULT_MAX_BACKUPS = 15
 
-
-# Constants
-PATH_UserFolder = path.expandvars("%userprofile%")
-PATH_DSR = path.join(PATH_UserFolder, FOLDER_documents, "NBGI", "DARK SOULS REMASTERED")
-# PATH_DSR = "D:\\Cloud\\NBGI\\DARK SOULS REMASTERED"
-
-def backup_saves(init):
-    for path_dir in listdir(PATH_DSR):
+def backup_saves(init, savePath, maxBackups):
+    for path_dir in listdir(savePath):
         # find save folder
-        path_dir_full = path.join(PATH_DSR, path_dir)
+        path_dir_full = path.join(savePath, path_dir)
         print(path_dir_full)
         if not path.isfile(path_dir_full):
             for file in (x for x in listdir(path_dir_full) if path.isfile(path.join(path_dir_full, x))):
@@ -52,13 +50,42 @@ def backup_saves(init):
                     print(f"{timePrint}   saving backup of {name_save}:")
                     spacing = " " * len(timePrint)
                     print(f"{spacing}   -> {name_backup}")
+                    # delete oldest backup if more than maxBackups exists
+                    while len(listdir(path_dir_backup)) > maxBackups:
+                        oldestBackupPath = ""
+                        oldestBackupTime = sys.maxsize
+                        for backup in listdir(path_dir_backup):
+                            currentBackupPath = path.join(path_dir_backup, backup)
+                            currentBackupTime = path.getmtime(currentBackupPath)
+                            if currentBackupTime < oldestBackupTime:
+                                oldestBackupPath = currentBackupPath
+                                oldestBackupTime = currentBackupTime
+                        remove(oldestBackupPath)
+                        removedBackupFile = path.basename(oldestBackupPath)
+                        print(f"{spacing}   removed backup of {name_save}:")
+                        print(f"{spacing}   -> {removedBackupFile}")
 
 def main():
-    backup_saves(True)
+    dsrPath = DEFAULT_DSR_PATH
+    saveInterval = DEFAULT_SAVE_INTERVAL
+    maxBackups = DEFAULT_MAX_BACKUPS
+    # Optional command line arguments
+    # Usage: <DSR Path> <Save Interval (Minutes)> <Maximum Backups to Keep>
+    if len(sys.argv) == 4:
+        dsrPath = sys.argv[1]
+        saveInterval = int(sys.argv[2])
+        maxBackups = int(sys.argv[3])
+
+    # Check if save directory exists. Exit otherwise
+    if not path.exists(dsrPath):
+        print(f"Dark Souls Remastered save directory not found at {dsrPath}")
+        sys.exit()
+
+    backup_saves(True, dsrPath, maxBackups)
+    iSleep = 60 * saveInterval
     while True:
-        backup_saves(False)
-        iSleep = 60 * MINUTES_X
-        print(f"\nsleeping for {MINUTES_X} minutes\n")
+        backup_saves(False, dsrPath, maxBackups)
+        print(f"\nsleeping for {saveInterval} minutes\n")
         sleep(iSleep)
 
 if __name__ == '__main__':
